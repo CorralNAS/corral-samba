@@ -236,6 +236,9 @@ freenas_getsampwsid(struct pdb_methods *methods, struct samu *sam_acct,
 	if (!sid_peek_check_rid(get_global_sam_sid(), sid, &rid))
 		return (NT_STATUS_UNSUCCESSFUL);
 
+	if (!algorithmic_pdb_rid_is_user(rid))
+		return (NT_STATUS_NO_SUCH_USER);
+
 	/* More special case 'guest account' hacks... */
 	if (rid == DOMAIN_RID_GUEST) {
 		const char *guest_account = lp_guest_account();
@@ -354,6 +357,9 @@ freenas_getgrsid(struct pdb_methods *methods, GROUP_MAP *map,
 
 	if (!sid_peek_check_rid(get_global_sam_sid(), &sid, &rid))
 		return (NT_STATUS_UNSUCCESSFUL);
+
+	if (algorithmic_pdb_rid_is_user(rid))
+		return (NT_STATUS_NO_SUCH_GROUP);
 
 	return freenas_getgrgid(methods, map, pdb_group_rid_to_gid(rid));
 }

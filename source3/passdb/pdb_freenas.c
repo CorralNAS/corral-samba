@@ -39,7 +39,7 @@
 
 struct freenas_search_state
 {
-	void (*callback)(json_t *, struct samr_displayentry *, TALLOC_CTX *);
+	bool (*callback)(json_t *, struct samr_displayentry *, TALLOC_CTX *);
 	connection_t *conn;
 	rpc_call_t *call;
 	json_t *users;
@@ -370,7 +370,7 @@ freenas_capabilities(struct pdb_methods *methods)
 	return (0);
 }
 
-static void
+static bool
 freenas_convert_user(json_t *user, struct samr_displayentry *entry,
     TALLOC_CTX *ctx)
 {
@@ -383,20 +383,28 @@ freenas_convert_user(json_t *user, struct samr_displayentry *entry,
 	entry->fullname = talloc_strdup(ctx, json_string_value(
 	    json_object_get(user, "full_name")));
 	entry->description = talloc_strdup(ctx, "description");
+
+	return (true);
 }
 
-static void
+static bool
 freenas_convert_group(json_t *group, struct samr_displayentry *entry,
     TALLOC_CTX *ctx)
 {
+	const char *name;
+
+	name = json_string_value(json_object_get(group, "name"));
+
+	if (getpwnam(name) != NULL)
+		return (false);
 
 	entry->rid = algorithmic_pdb_gid_to_group_rid(json_integer_value(
 	    json_object_get(group, "gid")));
-	entry->account_name = talloc_strdup(ctx, json_string_value(
-	    json_object_get(group, "name")));
-	entry->fullname = talloc_strdup(ctx, json_string_value(
-	    json_object_get(group, "name")));
+	entry->account_name = talloc_strdup(ctx, name);
+	entry->fullname = talloc_strdup(ctx, name);
 	entry->description = talloc_strdup(ctx, "description");
+
+	return (true);
 }
 
 static void
@@ -416,6 +424,7 @@ freenas_search_next_entry(struct pdb_search *search,
 	    search->private_data, struct freenas_search_state);
 	json_t *item;
 
+repeat:
 	if (state->position >= json_array_size(state->users)) {
 		if (rpc_call_continue(state->call, true) != RPC_CALL_MORE_AVAILABLE) {
 			rpc_call_free(state->call);
@@ -428,9 +437,12 @@ freenas_search_next_entry(struct pdb_search *search,
 	}
 
 	item = json_array_get(state->users, state->position);
-
 	entry->idx = state->position;
-	state->callback(item, entry, search);
+
+	if (!state->callback(item, entry, search)) {
+		state->position++;
+		goto repeat;
+	}
 
 	if (entry->account_name == NULL) {
 		DEBUG(0, ("talloc_strdup failed\n"));

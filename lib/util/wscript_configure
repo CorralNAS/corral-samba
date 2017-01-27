@@ -108,6 +108,7 @@ conf.CHECK_CODE('struct statvfs buf; buf.f_flags = 0',
 conf.SET_TARGET_TYPE('systemd-daemon', 'EMPTY')
 conf.SET_TARGET_TYPE('systemd-journal', 'EMPTY')
 conf.SET_TARGET_TYPE('systemd', 'EMPTY')
+conf.SET_TARGET_TYPE('logd', 'EMPTY')
 
 if Options.options.enable_systemd != False:
     conf.CHECK_CFG(package='libsystemd-daemon', args='--cflags --libs',

@@ -138,3 +138,7 @@ else:
 conf.env['CPPPATH_GPFS'] = Options.options.gpfs_headers_dir
 if conf.CHECK_HEADERS('gpfs.h', False, False, "gpfs"):
     conf.DEFINE('HAVE_GPFS', '1')
+
+if conf.CHECK_HEADERS('liblogd.h'):
+    conf.DEFINE('HAVE_LOGD', '1')
+    conf.CHECK_LIB('logd', shlib=True)

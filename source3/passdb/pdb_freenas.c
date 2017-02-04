@@ -525,6 +525,57 @@ freenas_search_groups(struct pdb_methods *methods, struct pdb_search *search)
 }
 
 static NTSTATUS
+freenas_enum_group_memberships(struct pdb_methods *methods, TALLOC_CTX *mem_ctx,
+    struct samu *user, struct dom_sid **pp_sids, gid_t **pp_gids,
+    uint32_t *p_num_groups)
+{
+	NTSTATUS nt_status = NT_STATUS_UNSUCCESSFUL;
+	json_t *result;
+	json_t *item;
+	size_t index;
+	int ret;
+	uint32_t p_num_gids = 0, p_num_sids = 0;
+
+	*pp_gids = NULL;
+	*pp_sids = NULL;
+	*p_num_groups = 0;
+
+	DEBUG(10, ("enum_group_membership (freenas): search by name: %s\n",
+	    user->username));
+
+	ret = call_dispatcher("dscached.account.getgroupmembership",
+	    json_pack("[sb]", user->username, true), &result);
+
+	if (ret != 0) {
+		DEBUG(0, ("Unable to connect to dscached service.\n"));
+		return (nt_status);
+	}
+
+	if (json_is_null(result) || !json_is_array(result))
+		return (NT_STATUS_OK);
+
+	DEBUG(10, ("enum_group_membership (freenas): found by name: %s\n",
+	    user->username));
+
+	json_array_foreach(result, index, item) {
+		struct dom_sid sid;
+		int gid;
+
+		gid = json_integer_value(item);
+		sid_compose(&sid, get_global_sam_sid(),
+		    algorithmic_pdb_gid_to_group_rid(gid));
+
+		add_gid_to_array_unique(mem_ctx, gid, pp_gids, &p_num_gids);
+		add_sid_to_array_unique(mem_ctx, &sid, pp_sids, &p_num_sids);
+	}
+
+	*p_num_groups = p_num_gids;
+
+	/* success */
+	return (NT_STATUS_OK);
+}
+
+static NTSTATUS
 pdb_init_freenas(struct pdb_methods **pdb_method, const char *location)
 {
 	NTSTATUS nt_status;
@@ -540,6 +591,7 @@ pdb_init_freenas(struct pdb_methods **pdb_method, const char *location)
 	(*pdb_method)->getgrsid = freenas_getgrsid;
 	(*pdb_method)->search_users = freenas_search_users;
 	(*pdb_method)->search_groups = freenas_search_groups;
+	(*pdb_method)->enum_group_memberships = freenas_enum_group_memberships;
 	(*pdb_method)->capabilities = freenas_capabilities;
 	(*pdb_method)->private_data = NULL;
 

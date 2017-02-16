@@ -544,7 +544,7 @@ freenas_enum_group_memberships(struct pdb_methods *methods, TALLOC_CTX *mem_ctx,
 	    user->username));
 
 	ret = call_dispatcher("dscached.account.getgroupmembership",
-	    json_pack("[sb]", user->username, true), &result);
+	    json_pack("[sbb]", user->username, true, true), &result);
 
 	if (ret != 0) {
 		DEBUG(0, ("Unable to connect to dscached service.\n"));

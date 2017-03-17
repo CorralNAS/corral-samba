@@ -236,6 +236,18 @@ static void debug_gpfs_log(int msg_level,
 }
 #endif /* HAVE_GPFS */
 
+#ifdef HAVE_LOGD
+#include <liblogd.h>
+static void debug_logd_log(int msg_level,
+			   const char *msg, const char *msg_no_nl)
+{
+	int priority;
+
+	priority = debug_level_to_priority(msg_level);
+	logd_print(priority, "%s", msg_no_nl);
+}
+#endif /* HAVE_LOGD */
+
 static struct debug_backend {
 	const char *name;
 	int log_level;
@@ -275,6 +287,12 @@ static struct debug_backend {
 		.reload = debug_gpfs_reload,
 		.log = debug_gpfs_log,
 	},
+#endif
+#ifdef HAVE_LOGD
+	{
+		.name = "logd",
+		.log = debug_logd_log,
+	}
 #endif
 };
 

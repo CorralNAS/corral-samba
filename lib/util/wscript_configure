@@ -108,6 +108,7 @@ conf.CHECK_CODE('struct statvfs buf; buf.f_flags = 0',
 conf.SET_TARGET_TYPE('systemd-daemon', 'EMPTY')
 conf.SET_TARGET_TYPE('systemd-journal', 'EMPTY')
 conf.SET_TARGET_TYPE('systemd', 'EMPTY')
+conf.SET_TARGET_TYPE('logd', 'EMPTY')
 
 if Options.options.enable_systemd != False:
     conf.CHECK_CFG(package='libsystemd-daemon', args='--cflags --libs',
@@ -138,3 +139,7 @@ else:
 conf.env['CPPPATH_GPFS'] = Options.options.gpfs_headers_dir
 if conf.CHECK_HEADERS('gpfs.h', False, False, "gpfs"):
     conf.DEFINE('HAVE_GPFS', '1')
+
+if conf.CHECK_HEADERS('liblogd.h'):
+    conf.DEFINE('HAVE_LOGD', '1')
+    conf.CHECK_LIB('logd', shlib=True)

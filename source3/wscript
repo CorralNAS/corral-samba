@@ -47,6 +47,7 @@ def set_options(opt):
     opt.SAMBA3_ADD_OPTION('utmp')
     opt.SAMBA3_ADD_OPTION('pthreadpool', with_name="enable", without_name="disable", default=True)
     opt.SAMBA3_ADD_OPTION('avahi', with_name="enable", without_name="disable")
+    opt.SAMBA3_ADD_OPTION('dnssd', with_name="enable", without_name="disable")
     opt.SAMBA3_ADD_OPTION('iconv')
     opt.SAMBA3_ADD_OPTION('acl-support')
     opt.SAMBA3_ADD_OPTION('dnsupdate')
@@ -76,6 +77,7 @@ def set_options(opt):
                   action="store_true", dest='enable_vxfs', default=False)
 
     opt.SAMBA3_ADD_OPTION('spotlight', with_name="enable", without_name="disable", default=False)
+    opt.SAMBA3_ADD_OPTION('freenas')
 
 def configure(conf):
     from samba_utils import TO_LIST
@@ -801,7 +803,7 @@ msg.msg_accrightslen = sizeof(fd);
         conf.env['HAVE_ADS'] = '1'
         Logs.info("Building with Active Directory support.")
         # these have broken dependencies
-        forced_shared_modules.extend(TO_LIST('idmap_ad idmap_rfc2307'))
+        forced_shared_modules.extend(TO_LIST('idmap_ad idmap_fruit idmap_rfc2307'))
     elif Options.options.with_ads == False:
         Logs.info("Building without Active Directory support (--without-ads).")
     else:
@@ -867,6 +869,17 @@ msg.msg_accrightslen = sizeof(fd);
     else:
         conf.SET_TARGET_TYPE('avahi-common', 'EMPTY')
         conf.SET_TARGET_TYPE('avahi-client', 'EMPTY')
+
+    if Options.options.with_dnssd:
+        conf.env.with_dnssd = True
+        if not conf.CHECK_HEADERS('dns_sd.h'):
+            conf.env.with_dnssd = False
+        if not conf.CHECK_FUNCS_IN('DNSServiceRegister', 'dns_sd'):
+            conf.env.with_dnssd = False
+        if conf.env.with_dnssd:
+            conf.DEFINE('WITH_DNSSD_SUPPORT', 1)
+    else:
+        conf.SET_TARGET_TYPE('dns_sd', 'EMPTY')
 
     if Options.options.with_iconv:
         conf.env.with_iconv = True
@@ -1660,6 +1673,16 @@ main() {
         default_static_modules.extend(TO_LIST('rpc_mdssvc_module'))
 
     forced_static_modules.extend(TO_LIST('auth_domain auth_builtin auth_sam auth_winbind'))
+
+    if Options.options.with_freenas:
+        conf.CHECK_LIB('dispatcherclient', shlib=True)
+        conf.CHECK_LIB('jansson', shlib=True)
+        conf.CHECK_LIB('geom', shlib=True)
+        conf.CHECK_LIB('uutil', shlib=True)
+        conf.CHECK_LIB('zfs_core', shlib=True)
+        conf.CHECK_LIB('zfs', shlib=True)
+        default_shared_modules.extend(TO_LIST('pdb_freenas'))
+
     default_static_modules.extend(TO_LIST('''pdb_smbpasswd pdb_tdbsam pdb_wbc_sam
                                       auth_unix auth_wbc
                                       nss_info_template idmap_tdb idmap_passdb
@@ -1713,6 +1736,9 @@ main() {
 
     if conf.CONFIG_SET('HAVE_LDAP'):
         default_static_modules.extend(TO_LIST('pdb_ldapsam idmap_ldap'))
+
+    if Options.options.with_libzfs:
+        default_static_modules.extend(TO_LIST('vfs_zfs_space'))
 
     if conf.CONFIG_SET('DARWINOS'):
         default_static_modules.extend(TO_LIST('charset_macosxfs'))

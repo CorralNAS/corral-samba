@@ -44,7 +44,7 @@ if bld.CONFIG_SET('HAVE_GPFS'):
 bld.SAMBA_LIBRARY('samba-debug',
                   source='debug.c',
                   deps='replace time-basic close-low-fd talloc socket-blocking' + samba_debug_add_deps,
-                  public_deps='systemd systemd-journal lttng-ust',
+                  public_deps='systemd systemd-journal lttng-ust logd',
                   local_include=False,
                   includes=samba_debug_add_inc,
                   private_library=True)

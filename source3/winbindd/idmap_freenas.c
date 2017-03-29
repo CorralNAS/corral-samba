@@ -154,9 +154,9 @@ idmap_freenas_sids_to_unixids(struct idmap_domain *dom, struct id_map **ids)
 		else if (strcmp(type, "BOTH") == 0)
 			ids[index]->xid.type = ID_TYPE_BOTH;
 		else
-			idex[index]->xid.type = ID_TYPE_NOT_SPECIFIED;
+			ids[index]->xid.type = ID_TYPE_NOT_SPECIFIED;
 
-		ids[i]->status = ID_MAPPED;
+		ids[index]->status = ID_MAPPED;
 	}
 
 	return (NT_STATUS_OK);

@@ -85,6 +85,7 @@ idmap_freenas_unixids_to_sids(struct idmap_domain *dom, struct id_map **ids)
 	json_t *result;
 	json_t *value;
 	size_t i, index;
+	const char *sidstr;
 	int err;
 
 	for (i = 0; ids[i]; i++)
@@ -112,6 +113,10 @@ idmap_freenas_unixids_to_sids(struct idmap_domain *dom, struct id_map **ids)
 	    json_pack("[o]", uids), &result);
 
 	json_array_foreach(result, index, value) {
+		sidstr = json_string_value(value);
+		if (sidstr == NULL)
+			continue;
+
 		dom_sid_parse(json_string_value(value), ids[index]->sid);
 		ids[index]->status = ID_MAPPED;
 	}
@@ -145,7 +150,8 @@ idmap_freenas_sids_to_unixids(struct idmap_domain *dom, struct id_map **ids)
 		int id;
 
 		json_unpack(value, "[si]", &type, &id);
-		ids[index]->xid.id = id;
+		if (type == NULL)
+			continue
 
 		if (strcmp(type, "UID") == 0)
 			ids[index]->xid.type = ID_TYPE_UID;
@@ -156,6 +162,7 @@ idmap_freenas_sids_to_unixids(struct idmap_domain *dom, struct id_map **ids)
 		else
 			ids[index]->xid.type = ID_TYPE_NOT_SPECIFIED;
 
+		ids[index]->xid.id = id;
 		ids[index]->status = ID_MAPPED;
 	}
 

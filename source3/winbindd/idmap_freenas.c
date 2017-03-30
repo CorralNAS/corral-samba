@@ -151,7 +151,7 @@ idmap_freenas_sids_to_unixids(struct idmap_domain *dom, struct id_map **ids)
 
 		json_unpack(value, "[si]", &type, &id);
 		if (type == NULL)
-			continue
+			continue;
 
 		if (strcmp(type, "UID") == 0)
 			ids[index]->xid.type = ID_TYPE_UID;
